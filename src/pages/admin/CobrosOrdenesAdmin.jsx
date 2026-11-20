@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import LayoutAdmin from '../../components/LayoutAdmin';
 import {
@@ -10,7 +10,12 @@ import {
   CheckCircle2,
   Droplet,
   ShoppingBag,
-  FileText
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Bike,
+  Calendar
 } from 'lucide-react';
 
 const ESTADOS_ORDEN = [
@@ -27,6 +32,10 @@ export default function CobrosOrdenesAdmin() {
   const [clientes, setClientes] = useState([]);
   const [inventario, setInventario] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
+
+  // Estado para desplegar detalles y fotos de una orden
+  const [ordenExpandida, setOrdenExpandida] = useState(null);
+  const [fotoAmpliada, setFotoAmpliada] = useState(null);
 
   // ==========================================
   // ESTADOS PARA REGISTRO DE COBROS
@@ -74,9 +83,9 @@ export default function CobrosOrdenesAdmin() {
       supabase.from('inventario').select('*').gt('cantidad', 0).order('detalle'),
       supabase
         .from('ordenes_trabajo')
-        .select('*, usuarios(nombre, cedula)')
+        .select('*, usuarios(nombre, cedula, telefono)')
         .order('numero_orden', { ascending: false })
-        .limit(20)
+        .limit(30)
     ]);
 
     if (cliData) setClientes(cliData);
@@ -153,7 +162,6 @@ export default function CobrosOrdenesAdmin() {
 
     setGuardandoCobro(true);
     try {
-      // 1. Insertar cabecera de venta
       const { data: ventaCreada, error: ventaError } = await supabase
         .from('ventas')
         .insert([
@@ -170,7 +178,6 @@ export default function CobrosOrdenesAdmin() {
 
       if (ventaError) throw ventaError;
 
-      // 2. Insertar detalles (el trigger de PostgreSQL descontará el stock automáticamente)
       const detallesInsert = itemsCobro.map((item) => ({
         venta_id: ventaCreada.id,
         tipo_item: item.tipo_item,
@@ -214,7 +221,6 @@ export default function CobrosOrdenesAdmin() {
     try {
       const urlsSubidas = [];
 
-      // Subir fotos de la moto si se seleccionaron
       if (fotosMoto.length > 0) {
         for (let i = 0; i < fotosMoto.length; i++) {
           const archivo = fotosMoto[i];
@@ -306,6 +312,10 @@ export default function CobrosOrdenesAdmin() {
       .eq('numero_orden', numeroOrden);
 
     if (!error) cargarDatosBase();
+  };
+
+  const toggleExpandirOrden = (numeroOrden) => {
+    setOrdenExpandida((prev) => (prev === numeroOrden ? null : numeroOrden));
   };
 
   return (
@@ -755,56 +765,235 @@ export default function CobrosOrdenesAdmin() {
         </section>
 
         {/* ============================================================ */}
-        {/* BLOQUE 3: ÓRDENES RECIENTES (CAMBIO RÁPIDO DE ESTADO)        */}
+        {/* BLOQUE 3: ÓRDENES RECIENTES (DESPLEGABLES CON FOTOS Y DATOS) */}
         {/* ============================================================ */}
         <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-          <h3 className="text-lg font-black text-white mb-4">ÓRDENES DE TRABAJO RECIENTES</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-black text-white">ÓRDENES DE TRABAJO RECIENTES</h3>
+            <p className="text-xs text-zinc-400">
+              Haz clic sobre cualquier orden para desplegar sus datos técnicos, observaciones y fotografías.
+            </p>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="border-b border-zinc-800 text-xs uppercase text-zinc-400">
+                  <th className="py-3 px-3 w-10"></th>
                   <th className="py-3 px-3"># Orden</th>
                   <th className="py-3 px-3">Cliente</th>
                   <th className="py-3 px-3">Motocicleta / Placa</th>
+                  <th className="py-3 px-3">Fotos</th>
                   <th className="py-3 px-3">Ingreso</th>
                   <th className="py-3 px-3">Actualizar Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/70">
-                {ordenes.map((ord) => (
-                  <tr key={ord.numero_orden} className="hover:bg-zinc-950/60">
-                    <td className="py-3 px-3 font-black text-red-500">
-                      #{String(ord.numero_orden).padStart(4, '0')}
-                    </td>
-                    <td className="py-3 px-3 font-semibold text-white">
-                      {ord.usuarios?.nombre || 'Cliente'}
-                    </td>
-                    <td className="py-3 px-3 text-zinc-300">
-                      {ord.marca} {ord.modelo} • <span className="font-bold text-white">{ord.placa}</span>
-                    </td>
-                    <td className="py-3 px-3 text-xs text-zinc-400">
-                      {new Date(ord.fecha_ingreso).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-3">
-                      <select
-                        value={ord.estado}
-                        onChange={(e) => cambiarEstadoOrden(ord.numero_orden, e.target.value)}
-                        className="bg-zinc-950 border border-zinc-700 focus:border-red-600 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white outline-none"
+                {ordenes.map((ord) => {
+                  const estaAbierta = ordenExpandida === ord.numero_orden;
+                  const cantidadFotos = ord.fotos_urls?.length || 0;
+
+                  return (
+                    <Fragment key={ord.numero_orden}>
+                      <tr
+                        onClick={() => toggleExpandirOrden(ord.numero_orden)}
+                        className={`cursor-pointer transition ${
+                          estaAbierta ? 'bg-zinc-950' : 'hover:bg-zinc-950/60'
+                        }`}
                       >
-                        {ESTADOS_ORDEN.map((est) => (
-                          <option key={est} value={est}>
-                            {est}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
+                        <td className="py-3 px-3 text-zinc-400">
+                          {estaAbierta ? (
+                            <ChevronUp className="w-4 h-4 text-red-500" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </td>
+                        <td className="py-3 px-3 font-black text-red-500">
+                          #{String(ord.numero_orden).padStart(4, '0')}
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-white">
+                          {ord.usuarios?.nombre || 'Cliente'}
+                        </td>
+                        <td className="py-3 px-3 text-zinc-300">
+                          {ord.marca} {ord.modelo} • <span className="font-bold text-white">{ord.placa}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+                              cantidadFotos > 0
+                                ? 'bg-red-600/20 text-red-400 border border-red-600/40'
+                                : 'bg-zinc-800 text-zinc-500'
+                            }`}
+                          >
+                            <Camera className="w-3 h-3" /> {cantidadFotos}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-xs text-zinc-400">
+                          {new Date(ord.fecha_ingreso).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={ord.estado}
+                            onChange={(e) => cambiarEstadoOrden(ord.numero_orden, e.target.value)}
+                            className="bg-zinc-950 border border-zinc-700 focus:border-red-600 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white outline-none"
+                          >
+                            {ESTADOS_ORDEN.map((est) => (
+                              <option key={est} value={est}>
+                                {est}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+
+                      {/* PANEL DESPLEGABLE CON TODOS LOS DATOS Y FOTOGRAFÍAS */}
+                      {estaAbierta && (
+                        <tr className="bg-zinc-950/90">
+                          <td colSpan="7" className="p-4 sm:p-6 border-b border-red-600/30">
+                            <div className="space-y-5">
+                              {/* Datos del cliente y fechas */}
+                              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3 text-xs">
+                                <div className="flex items-center gap-2 text-zinc-300">
+                                  <Bike className="w-4 h-4 text-red-500" />
+                                  <span>
+                                    Propietario: <strong className="text-white">{ord.usuarios?.nombre}</strong> •
+                                    Cédula: <strong className="text-white">{ord.usuarios?.cedula}</strong> •
+                                    Tel: <strong className="text-white">{ord.usuarios?.telefono || '-'}</strong>
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-4 text-zinc-400">
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="w-3.5 h-3.5 text-red-500" />
+                                    Ingreso: <strong className="text-white">{new Date(ord.fecha_ingreso).toLocaleString()}</strong>
+                                  </span>
+                                  <span>
+                                    Est. Entrega:{' '}
+                                    <strong className="text-white">
+                                      {ord.fecha_estimada_entrega
+                                        ? new Date(ord.fecha_estimada_entrega).toLocaleString()
+                                        : 'No definida'}
+                                    </strong>
+                                  </span>
+                                  {ord.fecha_real_entrega && (
+                                    <span>
+                                      Entregada:{' '}
+                                      <strong className="text-emerald-400">
+                                        {new Date(ord.fecha_real_entrega).toLocaleString()}
+                                      </strong>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Ficha Técnica Completa */}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
+                                <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg">
+                                  <span className="text-zinc-500 block">Año</span>
+                                  <strong className="text-white">{ord.anio || '-'}</strong>
+                                </div>
+                                <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg">
+                                  <span className="text-zinc-500 block">Cilindraje</span>
+                                  <strong className="text-white">{ord.cilindraje_cc ? `${ord.cilindraje_cc} cc` : '-'}</strong>
+                                </div>
+                                <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg">
+                                  <span className="text-zinc-500 block">Color</span>
+                                  <strong className="text-white">{ord.color || '-'}</strong>
+                                </div>
+                                <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg">
+                                  <span className="text-zinc-500 block">Tipo</span>
+                                  <strong className="text-white">{ord.tipo_motocicleta || '-'}</strong>
+                                </div>
+                                <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg">
+                                  <span className="text-zinc-500 block">Kilometraje</span>
+                                  <strong className="text-white">
+                                    {ord.kilometraje_actual ? `${ord.kilometraje_actual} km` : '-'}
+                                  </strong>
+                                </div>
+                                <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg">
+                                  <span className="text-zinc-500 block">Chasis (VIN) / Motor</span>
+                                  <strong className="text-white break-all">
+                                    {ord.numero_chasis_vin || '-'} / {ord.numero_motor || '-'}
+                                  </strong>
+                                </div>
+                              </div>
+
+                              {/* Observaciones */}
+                              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-xs">
+                                <span className="font-bold uppercase text-zinc-400 block mb-1">
+                                  Observaciones / Trabajo a realizar:
+                                </span>
+                                <p className="text-zinc-200 whitespace-pre-line">
+                                  {ord.observaciones || 'Sin observaciones registradas.'}
+                                </p>
+                              </div>
+
+                              {/* Galería de Fotografías de la Orden */}
+                              <div>
+                                <span className="text-xs font-bold uppercase text-zinc-400 flex items-center gap-1.5 mb-2.5">
+                                  <Camera className="w-4 h-4 text-red-500" />
+                                  Fotografías Adjuntas ({cantidadFotos})
+                                </span>
+
+                                {cantidadFotos === 0 ? (
+                                  <p className="text-xs text-zinc-500 italic">
+                                    No se adjuntaron fotografías en esta orden de trabajo.
+                                  </p>
+                                ) : (
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                                    {ord.fotos_urls.map((url, idx) => (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => setFotoAmpliada(url)}
+                                        className="group relative aspect-square rounded-xl overflow-hidden border border-zinc-800 hover:border-red-600 transition cursor-zoom-in"
+                                      >
+                                        <img
+                                          src={url}
+                                          alt={`Orden #${ord.numero_orden} foto ${idx + 1}`}
+                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
+                                        <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                                          Ver
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </section>
       </div>
+
+      {/* VISOR DE FOTO EN PANTALLA COMPLETA */}
+      {fotoAmpliada && (
+        <div
+          onClick={() => setFotoAmpliada(null)}
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+        >
+          <button
+            type="button"
+            onClick={() => setFotoAmpliada(null)}
+            className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-full cursor-pointer"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={fotoAmpliada}
+            alt="Evidencia motocicleta ampliada"
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-[90vh] object-contain rounded-xl border border-zinc-800"
+          />
+        </div>
+      )}
     </LayoutAdmin>
   );
 }

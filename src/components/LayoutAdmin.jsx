@@ -6,8 +6,7 @@ import {
   Wrench,
   Package,
   Image as ImageIcon,
-  LogOut,
-  ShieldAlert
+  LogOut
 } from 'lucide-react';
 
 export default function LayoutAdmin({ children }) {
@@ -39,18 +38,16 @@ export default function LayoutAdmin({ children }) {
       {/* Header Superior Admin */}
       <header className="sticky top-0 z-40 bg-black border-b border-zinc-800">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="bg-red-600 p-2 rounded-lg">
-              <ShieldAlert className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="text-lg font-black tracking-wider block leading-none">
-                MOTOPARTS<span className="text-red-600">EC</span>
-              </span>
-              <span className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
-                Administración
-              </span>
-            </div>
+          {/* LOGO DE MOTOPARTSEC + ETIQUETA ADMIN */}
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo-motopartsec.png"
+              alt="Logo Motopartsec"
+              className="h-16 w-auto object-contain rounded-lg"
+            />
+            <span className="hidden sm:inline-block px-2.5 py-0.5 bg-red-600/20 border border-red-600/50 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-full">
+              Administración
+            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -67,7 +64,7 @@ export default function LayoutAdmin({ children }) {
           </div>
         </div>
 
-        {/* Barra de Navegación Admin (Horizontal con scroll en móvil) */}
+        {/* Barra de Navegación Admin */}
         <div className="bg-zinc-950/90 border-t border-zinc-900 overflow-x-auto">
           <nav className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-2">
             {navItems.map((item) => {

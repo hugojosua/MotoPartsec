@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Wrench, UserPlus, ArrowLeft } from 'lucide-react';
+import { UserPlus, ArrowLeft } from 'lucide-react';
 
 export default function Registro() {
   const navigate = useNavigate();
@@ -56,13 +56,12 @@ export default function Registro() {
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
-          <div className="bg-red-600 p-3 rounded-full mb-3">
-            <Wrench className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-wider text-white">
-            MOTOPARTS<span className="text-red-600">EC</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">Registro de Nuevo Cliente</p>
+          <img
+            src="/logo-motopartsec.png"
+            alt="Logo Motopartsec"
+            className="h-40 w-auto object-contain mb-2 rounded-xl"
+          />
+          <p className="text-zinc-400 text-sm font-semibold">Registro de Nuevo Cliente</p>
         </div>
 
         {error && (

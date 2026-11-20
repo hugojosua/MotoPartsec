@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Home, BookOpen, User, LogOut, Wrench } from 'lucide-react';
+import { Home, BookOpen, User, LogOut } from 'lucide-react';
 import BurbujasSociales from './BurbujasSociales';
 
 export default function LayoutCliente({ children }) {
@@ -29,14 +29,14 @@ export default function LayoutCliente({ children }) {
       {/* Header Superior */}
       <header className="sticky top-0 z-40 bg-black/90 backdrop-blur border-b border-zinc-800">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="bg-red-600 p-2 rounded-lg">
-              <Wrench className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-black tracking-wider">
-              MOTOPARTS<span className="text-red-600">EC</span>
-            </span>
-          </div>
+          {/* LOGO DE MOTOPARTSEC */}
+          <NavLink to="/cliente/home" className="flex items-center gap-2.5">
+            <img
+              src="/logo-motopartsec.png"
+              alt="Logo Motopartsec"
+              className="h-16 w-auto object-contain rounded-lg"
+            />
+          </NavLink>
 
           {/* Menú Escritorio */}
           <nav className="hidden md:flex items-center gap-2">

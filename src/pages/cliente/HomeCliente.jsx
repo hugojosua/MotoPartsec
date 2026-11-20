@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import LayoutCliente from '../../components/LayoutCliente';
-import { Droplet, Gift, BookOpen, Wrench, CheckCircle2 } from 'lucide-react';
+import { Gift, BookOpen, Wrench } from 'lucide-react';
 
 export default function HomeCliente() {
   const { usuario, iniciarSesion } = useAuth();
@@ -56,7 +56,7 @@ export default function HomeCliente() {
         </h1>
       </div>
 
-      {/* TARJETA DE FIDELIZACIÓN (6 CAMBIOS DE ACEITE) */}
+      {/* TARJETA DE FIDELIZACIÓN (6 CAMBIOS DE ACEITE CON SELLO DEL LOGO) */}
       <div className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-red-950/40 border-2 border-red-600/70 rounded-2xl p-6 shadow-2xl shadow-red-950/20 mb-8 relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
@@ -80,7 +80,7 @@ export default function HomeCliente() {
           </div>
         </div>
 
-        {/* Grilla de los 6 Sellos */}
+        {/* Grilla de los 6 Sellos con Logo de la Empresa */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           {Array.from({ length: totalSellos }).map((_, index) => {
             const numeroSello = index + 1;
@@ -90,22 +90,56 @@ export default function HomeCliente() {
             return (
               <div
                 key={numeroSello}
-                className={`aspect-square rounded-xl border-2 flex flex-col items-center justify-center p-2 transition-all ${
+                className={`aspect-square rounded-xl border-2 flex flex-col items-center justify-center p-2 transition-all relative ${
                   completado
-                    ? 'bg-red-600 border-red-400 text-white shadow-lg shadow-red-600/30 scale-[1.02]'
+                    ? 'bg-black border-red-600 text-white shadow-lg shadow-red-600/30 scale-[1.03]'
                     : 'bg-zinc-950/80 border-zinc-800 border-dashed text-zinc-600'
                 }`}
               >
-                {esUltimo ? (
-                  <Gift className={`w-7 h-7 mb-1 ${completado ? 'text-white animate-bounce' : 'text-red-500/60'}`} />
-                ) : completado ? (
-                  <CheckCircle2 className="w-7 h-7 mb-1 text-white" />
-                ) : (
-                  <Droplet className="w-6 h-6 mb-1" />
-                )}
-                <span className="text-xs font-extrabold">
-                  {esUltimo ? '¡PREMIO!' : `Cambio #${numeroSello}`}
+                {/* Número discreto en la esquina */}
+                <span
+                  className={`absolute top-1.5 left-2 text-[10px] font-black ${
+                    completado ? 'text-red-500' : 'text-zinc-600'
+                  }`}
+                >
+                  #{numeroSello}
                 </span>
+
+                {esUltimo ? (
+                  <>
+                    <Gift
+                      className={`w-8 h-8 mb-1 ${
+                        completado ? 'text-red-500 animate-bounce' : 'text-red-500/50'
+                      }`}
+                    />
+                    <span
+                      className={`text-[11px] font-black tracking-wide ${
+                        completado ? 'text-white' : 'text-zinc-500'
+                      }`}
+                    >
+                      ¡PREMIO!
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <img
+                      src="/logo-motopartsec.png"
+                      alt={`Sello ${numeroSello} Motopartsec`}
+                      className={`w-12 h-12 sm:w-14 sm:h-14 object-contain transition-all duration-300 ${
+                        completado
+                          ? 'opacity-100 scale-105 drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]'
+                          : 'opacity-20 grayscale'
+                      }`}
+                    />
+                    <span
+                      className={`text-[10px] font-extrabold uppercase mt-1 ${
+                        completado ? 'text-red-500' : 'text-zinc-600'
+                      }`}
+                    >
+                      {completado ? 'Sellado' : 'Pendiente'}
+                    </span>
+                  </>
+                )}
               </div>
             );
           })}

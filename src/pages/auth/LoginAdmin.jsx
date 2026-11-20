@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldAlert, LogIn, ArrowLeft } from 'lucide-react';
+import { LogIn, ArrowLeft } from 'lucide-react';
 
 export default function LoginAdmin() {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export default function LoginAdmin() {
         .select('*')
         .eq('cedula', cedula.trim())
         .eq('password', password)
-        .eq('rol', 'admin') // Solo permite administradores
+        .eq('rol', 'admin')
         .single();
 
       if (sbError || !data) {
@@ -43,14 +43,16 @@ export default function LoginAdmin() {
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-zinc-950 border-2 border-red-600/60 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-red-950/30">
         <div className="flex flex-col items-center mb-6">
-          <div className="bg-red-600/20 border border-red-600 p-3.5 rounded-full mb-3">
-            <ShieldAlert className="w-8 h-8 text-red-500" />
-          </div>
-          <h1 className="text-2xl font-black tracking-wider text-white">
+          <img
+            src="/logo-motopartsec.png"
+            alt="Logo Motopartsec"
+            className="h-20 w-auto object-contain mb-3 rounded-xl"
+          />
+          <h1 className="text-xl font-black tracking-wider text-white">
             PANEL <span className="text-red-600">ADMINISTRATIVO</span>
           </h1>
           <p className="text-zinc-400 text-xs uppercase tracking-widest mt-1">
-            Motopartsec • Acceso Restringido
+            Acceso Restringido
           </p>
         </div>
 

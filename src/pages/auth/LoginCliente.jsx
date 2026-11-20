@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { Bike, LogIn, ShieldCheck } from 'lucide-react';
+import { LogIn, ShieldCheck } from 'lucide-react';
 
 export default function LoginCliente() {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export default function LoginCliente() {
         .select('*')
         .eq('cedula', cedula.trim())
         .eq('password', password)
-        .eq('rol', 'cliente') // Solo permite clientes en este login
+        .eq('rol', 'cliente')
         .single();
 
       if (sbError || !data) {
@@ -44,13 +44,12 @@ export default function LoginCliente() {
       <div className="flex-1 flex items-center justify-center">
         <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
           <div className="flex flex-col items-center mb-6">
-            <div className="bg-red-600 p-3.5 rounded-full mb-3 shadow-lg shadow-red-600/30">
-              <Bike className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-black tracking-wider text-white">
-              MOTOPARTS<span className="text-red-600">EC</span>
-            </h1>
-            <span className="mt-2 px-3 py-0.5 bg-zinc-800 text-red-500 text-xs font-bold uppercase tracking-widest rounded-full">
+            <img
+              src="/logo-motopartsec.png"
+              alt="Logo Motopartsec"
+              className="h-40 w-auto object-contain mb-3 rounded-xl"
+            />
+            <span className="px-3 py-0.5 bg-zinc-800 text-red-500 text-xs font-bold uppercase tracking-widest rounded-full">
               Portal de Clientes
             </span>
           </div>
