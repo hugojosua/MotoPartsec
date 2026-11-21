@@ -2,8 +2,125 @@
 
 @layer base {
   body {
-    background-color: #09090b;
-    color: #ffffff;
+    background-color: #f4f4f5; /* Fondo general gris muy claro / blanco suave */
+    color: #09090b;            /* Texto principal negro */
     font-family: system-ui, -apple-system, sans-serif;
   }
+}
+
+/* =====================================================================
+   TEMA CLARO CORPORATIVO MOTOPARTSEC (FONDO BLANCO, ROJO Y NEGRO)
+   ===================================================================== */
+
+/* 1. Fondos principales -> Blanco y Gris Claro */
+.bg-zinc-950,
+.bg-zinc-950\/90,
+.bg-zinc-950\/80,
+.bg-zinc-950\/60 {
+  background-color: #f8fafc !important;
+}
+
+.bg-zinc-900,
+.bg-zinc-900\/70 {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+}
+
+.bg-black,
+.bg-black\/90 {
+  background-color: #ffffff !important;
+}
+
+/* Mantener fondo negro únicamente en modales de foto ampliada */
+.fixed.inset-0.z-50.bg-black\/95 {
+  background-color: rgba(0, 0, 0, 0.92) !important;
+}
+
+.bg-zinc-800 {
+  background-color: #f1f5f9 !important;
+}
+
+/* 2. Textos claros -> Negro y Gris Oscuro para máxima legibilidad */
+.text-white {
+  color: #09090b !important;
+}
+
+/* Excepción: Mantener texto blanco dentro de botones e insignias rojas, verdes o negras */
+.bg-red-600.text-white,
+.bg-red-600 .text-white,
+.hover\:bg-red-600:hover.text-white,
+.hover\:bg-red-600:hover .text-white,
+.bg-emerald-600.text-white,
+.bg-emerald-500.text-white,
+.bg-gradient-to-tr.text-white,
+.file\:bg-red-600::file-selector-button {
+  color: #ffffff !important;
+}
+
+.text-zinc-200,
+.text-zinc-300 {
+  color: #1e293b !important;
+}
+
+.text-zinc-400 {
+  color: #475569 !important;
+}
+
+.text-zinc-500,
+.text-zinc-600 {
+  color: #64748b !important;
+}
+
+/* 3. Bordes sutiles sobre fondo blanco */
+.border-zinc-800,
+.border-zinc-800\/80,
+.border-zinc-800\/70,
+.border-zinc-900,
+.border-zinc-700 {
+  border-color: #e2e8f0 !important;
+}
+
+.divide-zinc-800\/70 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+/* 4. Ajustes de tarjetas destacadas (Fidelización y Alertas) */
+.from-zinc-900.via-zinc-900 {
+  background-image: linear-gradient(to bottom right, #ffffff, #fff1f2) !important;
+}
+
+.bg-red-950\/30,
+.bg-red-950\/20 {
+  background-color: #fef2f2 !important;
+}
+
+.bg-red-950\/80,
+.bg-red-950\/90,
+.bg-red-950 {
+  background-color: #fee2e2 !important;
+}
+
+.text-red-200 {
+  color: #991b1b !important;
+}
+
+.bg-emerald-950\/80 {
+  background-color: #ecfdf5 !important;
+}
+
+.text-emerald-200 {
+  color: #065f46 !important;
+}
+
+/* 5. Inputs y Selects en modo claro */
+input,
+select,
+textarea {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8 !important;
 }
