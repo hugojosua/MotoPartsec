@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 import LayoutAdmin from '../../components/LayoutAdmin';
 import {
   DollarSign,
@@ -15,7 +16,9 @@ import {
   ChevronUp,
   X,
   Bike,
-  Calendar
+  Calendar,
+  Send,
+  Bell
 } from 'lucide-react';
 
 const ESTADOS_ORDEN = [
@@ -29,13 +32,21 @@ const ESTADOS_ORDEN = [
 ];
 
 export default function CobrosOrdenesAdmin() {
+  const { usuario } = useAuth();
   const [clientes, setClientes] = useState([]);
   const [inventario, setInventario] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
+  const [avancesPorOrden, setAvancesPorOrden] = useState({});
 
-  // Estado para desplegar detalles y fotos de una orden
+  // Estado para desplegar detalles, fotos y envío de actualizaciones de una orden
   const [ordenExpandida, setOrdenExpandida] = useState(null);
   const [fotoAmpliada, setFotoAmpliada] = useState(null);
+
+  // Estados para enviar una actualización / notificación al cliente desde la orden abierta
+  const [estadoActualizacion, setEstadoActualizacion] = useState('');
+  const [mensajeActualizacion, setMensajeActualizacion] = useState('');
+  const [fotoAvance, setFotoAvance] = useState(null);
+  const [enviandoAvance, setEnviandoAvance] = useState(false);
 
   // ==========================================
   // ESTADOS PARA REGISTRO DE COBROS
@@ -45,11 +56,9 @@ export default function CobrosOrdenesAdmin() {
   const [esCambioAceite, setEsCambioAceite] = useState(false);
   const [itemsCobro, setItemsCobro] = useState([]);
 
-  // Selector de producto de inventario
   const [productoSeleccionadoId, setProductoSeleccionadoId] = useState('');
   const [cantidadProducto, setCantidadProducto] = useState(1);
 
-  // Inputs de servicio manual
   const [servicioDesc, setServicioDesc] = useState('');
   const [servicioPrecio, setServicioPrecio] = useState('');
   const [guardandoCobro, setGuardandoCobro] = useState(false);
@@ -78,23 +87,50 @@ export default function CobrosOrdenesAdmin() {
   const [guardandoOrden, setGuardandoOrden] = useState(false);
 
   const cargarDatosBase = async () => {
-    const [{ data: cliData }, { data: invData }, { data: ordData }] = await Promise.all([
-      supabase.from('usuarios').select('*').eq('rol', 'cliente').order('nombre'),
-      supabase.from('inventario').select('*').gt('cantidad', 0).order('detalle'),
-      supabase
-        .from('ordenes_trabajo')
-        .select('*, usuarios(nombre, cedula, telefono)')
-        .order('numero_orden', { ascending: false })
-        .limit(30)
-    ]);
+    const [{ data: cliData }, { data: invData }, { data: ordData }, { data: avData }] =
+      await Promise.all([
+        supabase.from('usuarios').select('*').eq('rol', 'cliente').order('nombre'),
+        supabase.from('inventario').select('*').gt('cantidad', 0).order('detalle'),
+        supabase
+          .from('ordenes_trabajo')
+          .select('*, usuarios(nombre, cedula, telefono)')
+          .order('numero_orden', { ascending: false })
+          .limit(30),
+        supabase.from('orden_avances').select('*').order('created_at', { ascending: true })
+      ]);
 
     if (cliData) setClientes(cliData);
     if (invData) setInventario(invData);
     if (ordData) setOrdenes(ordData);
+
+    if (avData) {
+      const agrupados = {};
+      avData.forEach((av) => {
+        if (!agrupados[av.orden_id]) agrupados[av.orden_id] = [];
+        agrupados[av.orden_id].push(av);
+      });
+      setAvancesPorOrden(agrupados);
+    }
   };
 
   useEffect(() => {
     cargarDatosBase();
+
+    // Escuchar respuestas o notificaciones nuevas de clientes en tiempo real
+    const canal = supabase
+      .channel('admin-avances-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orden_avances' },
+        () => {
+          cargarDatosBase();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
   }, []);
 
   // Agregar producto desde inventario al carrito de cobro
@@ -268,7 +304,22 @@ export default function CobrosOrdenesAdmin() {
 
       if (ordError) throw ordError;
 
-      alert(`¡Orden de Trabajo #${String(nuevaOrden.numero_orden).padStart(4, '0')} creada correctamente!`);
+      // Crear el primer evento automático en la bitácora de avances del cliente
+      await supabase.from('orden_avances').insert([
+        {
+          orden_id: nuevaOrden.numero_orden,
+          emisor_rol: 'admin',
+          emisor_nombre: usuario?.nombre || 'Taller Motopartsec',
+          nuevo_estado: formOrden.estado,
+          mensaje:
+            formOrden.observaciones.trim() ||
+            `Motocicleta ${formOrden.marca} ${formOrden.modelo} (${formOrden.placa}) ingresada al taller.`,
+          foto_url: urlsSubidas[0] || null,
+          leido: false
+        }
+      ]);
+
+      alert(`¡Orden de Trabajo #${String(nuevaOrden.numero_orden).padStart(4, '0')} creada y notificada al cliente!`);
 
       setFormOrden({
         cliente_id: '',
@@ -299,8 +350,8 @@ export default function CobrosOrdenesAdmin() {
     }
   };
 
-  // Actualizar estado rápido de una orden existente
-  const cambiarEstadoOrden = async (numeroOrden, nuevoEstado) => {
+  // Actualizar estado rápido desde el selector de la tabla y notificar al cliente
+  const cambiarEstadoOrden = async (orden, nuevoEstado) => {
     const actualizacion = { estado: nuevoEstado };
     if (nuevoEstado === 'Entregada') {
       actualizacion.fecha_real_entrega = new Date().toISOString();
@@ -309,13 +360,123 @@ export default function CobrosOrdenesAdmin() {
     const { error } = await supabase
       .from('ordenes_trabajo')
       .update(actualizacion)
-      .eq('numero_orden', numeroOrden);
+      .eq('numero_orden', orden.numero_orden);
 
-    if (!error) cargarDatosBase();
+    if (!error) {
+      await supabase.from('orden_avances').insert([
+        {
+          orden_id: orden.numero_orden,
+          emisor_rol: 'admin',
+          emisor_nombre: usuario?.nombre || 'Taller Motopartsec',
+          nuevo_estado: nuevoEstado,
+          mensaje: `El estado de tu motocicleta cambió a: ${nuevoEstado}.`,
+          leido: false
+        }
+      ]);
+      cargarDatosBase();
+    }
   };
 
-  const toggleExpandirOrden = (numeroOrden) => {
-    setOrdenExpandida((prev) => (prev === numeroOrden ? null : numeroOrden));
+  // Enviar actualización detallada (estado + nota + foto opcional) al cliente
+  const handleEnviarActualizacion = async (e, orden) => {
+    e.preventDefault();
+    const estadoFinal = estadoActualizacion || orden.estado;
+    if (!mensajeActualizacion.trim() && estadoFinal === orden.estado && !fotoAvance) {
+      alert('Escribe un mensaje, cambia el estado o adjunta una foto para enviar la actualización.');
+      return;
+    }
+
+    setEnviandoAvance(true);
+    try {
+      let urlFotoNueva = null;
+
+      // Si el mecánico subió una foto del avance, guardarla en Storage y sumarla a la orden
+      if (fotoAvance) {
+        const ext = fotoAvance.name.split('.').pop();
+        const nombreArchivo = `avance_${orden.numero_orden}_${Date.now()}.${ext}`;
+
+        const { error: upErr } = await supabase.storage
+          .from('motos_ordenes')
+          .upload(nombreArchivo, fotoAvance);
+
+        if (upErr) throw upErr;
+
+        const { data: urlData } = supabase.storage
+          .from('motos_ordenes')
+          .getPublicUrl(nombreArchivo);
+
+        urlFotoNueva = urlData.publicUrl;
+      }
+
+      // Actualizar estado y galería de la orden si hubo cambios
+      const camposOrden = { estado: estadoFinal };
+      if (estadoFinal === 'Entregada' && !orden.fecha_real_entrega) {
+        camposOrden.fecha_real_entrega = new Date().toISOString();
+      }
+      if (urlFotoNueva) {
+        camposOrden.fotos_urls = [...(orden.fotos_urls || []), urlFotoNueva];
+      }
+
+      const { error: ordUpdErr } = await supabase
+        .from('ordenes_trabajo')
+        .update(camposOrden)
+        .eq('numero_orden', orden.numero_orden);
+
+      if (ordUpdErr) throw ordUpdErr;
+
+      // Registrar en la bitácora de avances para notificar al cliente
+      const { error: avErr } = await supabase.from('orden_avances').insert([
+        {
+          orden_id: orden.numero_orden,
+          emisor_rol: 'admin',
+          emisor_nombre: usuario?.nombre || 'Taller Motopartsec',
+          nuevo_estado: estadoFinal,
+          mensaje:
+            mensajeActualizacion.trim() ||
+            `Actualización de estado: ${estadoFinal}`,
+          foto_url: urlFotoNueva,
+          leido: false
+        }
+      ]);
+
+      if (avErr) throw avErr;
+
+      setMensajeActualizacion('');
+      setFotoAvance(null);
+      if (document.getElementById(`foto-avance-${orden.numero_orden}`)) {
+        document.getElementById(`foto-avance-${orden.numero_orden}`).value = '';
+      }
+      cargarDatosBase();
+    } catch (err) {
+      alert('Error al enviar actualización: ' + err.message);
+    } finally {
+      setEnviandoAvance(false);
+    }
+  };
+
+  // Desplegar orden y marcar mensajes del cliente como leídos
+  const toggleExpandirOrden = async (orden) => {
+    const abriendo = ordenExpandida !== orden.numero_orden;
+    setOrdenExpandida(abriendo ? orden.numero_orden : null);
+
+    if (abriendo) {
+      setEstadoActualizacion(orden.estado);
+      setMensajeActualizacion('');
+      setFotoAvance(null);
+
+      // Marcar notificaciones del cliente en esta orden como leídas
+      const noLeidosCliente = (avancesPorOrden[orden.numero_orden] || []).filter(
+        (a) => a.emisor_rol === 'cliente' && !a.leido
+      );
+      if (noLeidosCliente.length > 0) {
+        await supabase
+          .from('orden_avances')
+          .update({ leido: true })
+          .eq('orden_id', orden.numero_orden)
+          .eq('emisor_rol', 'cliente');
+        cargarDatosBase();
+      }
+    }
   };
 
   return (
@@ -338,7 +499,6 @@ export default function CobrosOrdenesAdmin() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Izquierda: Selectores de cliente, productos y servicios */}
             <div className="lg:col-span-2 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -378,7 +538,6 @@ export default function CobrosOrdenesAdmin() {
                 </div>
               </div>
 
-              {/* Agregar Producto del Inventario */}
               <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
                 <label className="block text-xs font-bold uppercase text-red-500 mb-2 flex items-center gap-1.5">
                   <ShoppingBag className="w-3.5 h-3.5" /> Agregar Producto del Inventario
@@ -413,7 +572,6 @@ export default function CobrosOrdenesAdmin() {
                 </div>
               </div>
 
-              {/* Agregar Servicio / Mano de Obra */}
               <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
                 <label className="block text-xs font-bold uppercase text-red-500 mb-2 flex items-center gap-1.5">
                   <Wrench className="w-3.5 h-3.5" /> Agregar Servicio / Mano de Obra
@@ -445,7 +603,6 @@ export default function CobrosOrdenesAdmin() {
                 </div>
               </div>
 
-              {/* Checkbox Fidelización Cambio de Aceite */}
               <label className="flex items-center gap-3 bg-red-950/30 border border-red-600/40 rounded-xl p-3.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -462,7 +619,6 @@ export default function CobrosOrdenesAdmin() {
               </label>
             </div>
 
-            {/* Derecha: Resumen del Cobro */}
             <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 flex flex-col justify-between">
               <div>
                 <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400 border-b border-zinc-800 pb-2 mb-3">
@@ -538,7 +694,6 @@ export default function CobrosOrdenesAdmin() {
           </div>
 
           <form onSubmit={registrarOrdenTrabajo} className="space-y-5">
-            {/* Cliente, Estado y Fechas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">Cliente *</label>
@@ -597,7 +752,6 @@ export default function CobrosOrdenesAdmin() {
               </div>
             </div>
 
-            {/* Datos Técnicos de la Motocicleta */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 pt-2">
               <div>
                 <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">Marca *</label>
@@ -718,7 +872,6 @@ export default function CobrosOrdenesAdmin() {
               </div>
             </div>
 
-            {/* Fotografías y Observaciones */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase text-zinc-400 mb-1 flex items-center gap-1.5">
@@ -765,13 +918,13 @@ export default function CobrosOrdenesAdmin() {
         </section>
 
         {/* ============================================================ */}
-        {/* BLOQUE 3: ÓRDENES RECIENTES (DESPLEGABLES CON FOTOS Y DATOS) */}
+        {/* BLOQUE 3: ÓRDENES RECIENTES (DESPLEGABLES + ACTUALIZACIONES)  */}
         {/* ============================================================ */}
         <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <div className="mb-4">
             <h3 className="text-lg font-black text-white">ÓRDENES DE TRABAJO RECIENTES</h3>
             <p className="text-xs text-zinc-400">
-              Haz clic sobre cualquier orden para desplegar sus datos técnicos, observaciones y fotografías.
+              Haz clic en cualquier orden para ver los datos, fotos, enviar actualizaciones de avance al cliente y leer sus respuestas.
             </p>
           </div>
 
@@ -783,8 +936,8 @@ export default function CobrosOrdenesAdmin() {
                   <th className="py-3 px-3"># Orden</th>
                   <th className="py-3 px-3">Cliente</th>
                   <th className="py-3 px-3">Motocicleta / Placa</th>
+                  <th className="py-3 px-3">Mensajes</th>
                   <th className="py-3 px-3">Fotos</th>
-                  <th className="py-3 px-3">Ingreso</th>
                   <th className="py-3 px-3">Actualizar Estado</th>
                 </tr>
               </thead>
@@ -792,11 +945,15 @@ export default function CobrosOrdenesAdmin() {
                 {ordenes.map((ord) => {
                   const estaAbierta = ordenExpandida === ord.numero_orden;
                   const cantidadFotos = ord.fotos_urls?.length || 0;
+                  const listaAvances = avancesPorOrden[ord.numero_orden] || [];
+                  const sinLeerCliente = listaAvances.filter(
+                    (a) => a.emisor_rol === 'cliente' && !a.leido
+                  ).length;
 
                   return (
                     <Fragment key={ord.numero_orden}>
                       <tr
-                        onClick={() => toggleExpandirOrden(ord.numero_orden)}
+                        onClick={() => toggleExpandirOrden(ord)}
                         className={`cursor-pointer transition ${
                           estaAbierta ? 'bg-zinc-950' : 'hover:bg-zinc-950/60'
                         }`}
@@ -818,23 +975,29 @@ export default function CobrosOrdenesAdmin() {
                           {ord.marca} {ord.modelo} • <span className="font-bold text-white">{ord.placa}</span>
                         </td>
                         <td className="py-3 px-3">
+                          {sinLeerCliente > 0 ? (
+                            <span className="inline-flex items-center gap-1 bg-red-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full animate-pulse">
+                              <Bell className="w-3 h-3" /> {sinLeerCliente} nuevo(s)
+                            </span>
+                          ) : (
+                            <span className="text-xs text-zinc-500">{listaAvances.length} notif.</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3">
                           <span
                             className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
                               cantidadFotos > 0
-                                ? 'bg-red-600/20 text-red-400 border border-red-600/40'
-                                : 'bg-zinc-800 text-zinc-500'
+                                ? 'bg-zinc-800 text-zinc-200'
+                                : 'bg-zinc-900 text-zinc-500'
                             }`}
                           >
                             <Camera className="w-3 h-3" /> {cantidadFotos}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-xs text-zinc-400">
-                          {new Date(ord.fecha_ingreso).toLocaleDateString()}
-                        </td>
                         <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
                           <select
                             value={ord.estado}
-                            onChange={(e) => cambiarEstadoOrden(ord.numero_orden, e.target.value)}
+                            onChange={(e) => cambiarEstadoOrden(ord, e.target.value)}
                             className="bg-zinc-950 border border-zinc-700 focus:border-red-600 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white outline-none"
                           >
                             {ESTADOS_ORDEN.map((est) => (
@@ -846,11 +1009,11 @@ export default function CobrosOrdenesAdmin() {
                         </td>
                       </tr>
 
-                      {/* PANEL DESPLEGABLE CON TODOS LOS DATOS Y FOTOGRAFÍAS */}
+                      {/* PANEL DESPLEGABLE CON DATOS, FOTOS Y BITÁCORA DE ACTUALIZACIONES */}
                       {estaAbierta && (
                         <tr className="bg-zinc-950/90">
                           <td colSpan="7" className="p-4 sm:p-6 border-b border-red-600/30">
-                            <div className="space-y-5">
+                            <div className="space-y-6">
                               {/* Datos del cliente y fechas */}
                               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3 text-xs">
                                 <div className="flex items-center gap-2 text-zinc-300">
@@ -874,14 +1037,6 @@ export default function CobrosOrdenesAdmin() {
                                         : 'No definida'}
                                     </strong>
                                   </span>
-                                  {ord.fecha_real_entrega && (
-                                    <span>
-                                      Entregada:{' '}
-                                      <strong className="text-emerald-400">
-                                        {new Date(ord.fecha_real_entrega).toLocaleString()}
-                                      </strong>
-                                    </span>
-                                  )}
                                 </div>
                               </div>
 
@@ -917,21 +1072,137 @@ export default function CobrosOrdenesAdmin() {
                                 </div>
                               </div>
 
-                              {/* Observaciones */}
-                              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-xs">
-                                <span className="font-bold uppercase text-zinc-400 block mb-1">
-                                  Observaciones / Trabajo a realizar:
-                                </span>
-                                <p className="text-zinc-200 whitespace-pre-line">
-                                  {ord.observaciones || 'Sin observaciones registradas.'}
-                                </p>
+                              {/* PANEL DE COMUNICACIÓN Y ACTUALIZACIÓN DE AVANCES AL CLIENTE */}
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                                {/* Formulario para enviar novedad / avance al cliente */}
+                                <form
+                                  onSubmit={(e) => handleEnviarActualizacion(e, ord)}
+                                  className="space-y-3"
+                                >
+                                  <h4 className="text-xs font-black uppercase text-red-500 flex items-center gap-1.5">
+                                    <Send className="w-3.5 h-3.5" />
+                                    Enviar Avance / Notificación al Cliente
+                                  </h4>
+
+                                  <div>
+                                    <label className="block text-[11px] text-zinc-400 mb-1">
+                                      Nuevo Estado de la Orden
+                                    </label>
+                                    <select
+                                      value={estadoActualizacion || ord.estado}
+                                      onChange={(e) => setEstadoActualizacion(e.target.value)}
+                                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-red-600 rounded-lg px-3 py-2 text-xs font-bold text-white outline-none"
+                                    >
+                                      {ESTADOS_ORDEN.map((est) => (
+                                        <option key={est} value={est}>
+                                          {est}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] text-zinc-400 mb-1">
+                                      Mensaje / Detalle del avance para el cliente
+                                    </label>
+                                    <textarea
+                                      rows={2}
+                                      placeholder="Ej: Ya desmontamos el motor, necesitamos tu aprobación para cambiar el kit de arrastre..."
+                                      value={mensajeActualizacion}
+                                      onChange={(e) => setMensajeActualizacion(e.target.value)}
+                                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-red-600 rounded-lg px-3 py-2 text-xs text-white outline-none"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] text-zinc-400 mb-1">
+                                      Adjuntar Foto del Avance (Opcional)
+                                    </label>
+                                    <input
+                                      id={`foto-avance-${ord.numero_orden}`}
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) => setFotoAvance(e.target.files[0])}
+                                      className="w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-red-600 bg-zinc-950 border border-zinc-800 rounded-lg p-1"
+                                    />
+                                  </div>
+
+                                  <button
+                                    type="submit"
+                                    disabled={enviandoAvance}
+                                    className="w-full bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                                  >
+                                    <Send className="w-3.5 h-3.5" />
+                                    {enviandoAvance ? 'Enviando...' : 'Publicar Avance y Notificar'}
+                                  </button>
+                                </form>
+
+                                {/* Historial de Avances y Respuestas del Cliente */}
+                                <div className="flex flex-col">
+                                  <h4 className="text-xs font-black uppercase text-zinc-400 mb-2">
+                                    Historial de Avances y Mensajes ({listaAvances.length})
+                                  </h4>
+                                  <div className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl p-3 max-h-64 overflow-y-auto space-y-2.5">
+                                    {listaAvances.length === 0 ? (
+                                      <p className="text-xs text-zinc-500 text-center py-6">
+                                        Aún no hay actualizaciones enviadas en esta orden.
+                                      </p>
+                                    ) : (
+                                      listaAvances.map((av) => {
+                                        const esAdmin = av.emisor_rol === 'admin';
+                                        return (
+                                          <div
+                                            key={av.id}
+                                            className={`p-2.5 rounded-lg text-xs border ${
+                                              esAdmin
+                                                ? 'bg-zinc-900 border-zinc-800'
+                                                : 'bg-red-950/30 border-red-600/40'
+                                            }`}
+                                          >
+                                            <div className="flex items-center justify-between gap-2 mb-1">
+                                              <span
+                                                className={`font-black text-[10px] uppercase ${
+                                                  esAdmin ? 'text-red-500' : 'text-emerald-400'
+                                                }`}
+                                              >
+                                                {esAdmin ? 'Taller Motopartsec' : `Cliente (${av.emisor_nombre})`}
+                                              </span>
+                                              <span className="text-[10px] text-zinc-500">
+                                                {new Date(av.created_at).toLocaleString()}
+                                              </span>
+                                            </div>
+                                            {av.nuevo_estado && (
+                                              <span className="inline-block bg-zinc-800 text-zinc-200 text-[10px] font-bold px-2 py-0.5 rounded mb-1">
+                                                Estado: {av.nuevo_estado}
+                                              </span>
+                                            )}
+                                            <p className="text-zinc-200">{av.mensaje}</p>
+                                            {av.foto_url && (
+                                              <button
+                                                type="button"
+                                                onClick={() => setFotoAmpliada(av.foto_url)}
+                                                className="mt-2 inline-block"
+                                              >
+                                                <img
+                                                  src={av.foto_url}
+                                                  alt="Foto avance"
+                                                  className="h-16 w-16 object-cover rounded border border-zinc-700 hover:border-red-500"
+                                                />
+                                              </button>
+                                            )}
+                                          </div>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                </div>
                               </div>
 
                               {/* Galería de Fotografías de la Orden */}
                               <div>
                                 <span className="text-xs font-bold uppercase text-zinc-400 flex items-center gap-1.5 mb-2.5">
                                   <Camera className="w-4 h-4 text-red-500" />
-                                  Fotografías Adjuntas ({cantidadFotos})
+                                  Todas las Fotografías de la Moto ({cantidadFotos})
                                 </span>
 
                                 {cantidadFotos === 0 ? (

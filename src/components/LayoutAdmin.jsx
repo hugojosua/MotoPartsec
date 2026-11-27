@@ -27,36 +27,39 @@ export default function LayoutAdmin({ children }) {
   ];
 
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-bold transition whitespace-nowrap ${
+    `flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 whitespace-nowrap ${
       isActive
-        ? 'bg-red-600 text-white shadow-lg shadow-red-600/20'
-        : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+        ? 'bg-red-600 text-white shadow-sm shadow-red-600/25'
+        : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'
     }`;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
-      {/* Header Superior Admin */}
-      <header className="sticky top-0 z-40 bg-black border-b border-zinc-800">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          {/* LOGO DE MOTOPARTSEC + ETIQUETA ADMIN */}
+    <div className="min-h-screen bg-white text-slate-900 flex flex-col theme-admin-light">
+      {/* Header Superior Blanco con Glassmorphism */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          {/* LOGO DE MOTOPARTSEC + BADGE EJECUTIVO */}
           <div className="flex items-center gap-3">
-            <img
-              src="/logo-motopartsec.png"
-              alt="Logo Motopartsec"
-              className="h-16 w-auto object-contain rounded-lg"
-            />
-            <span className="hidden sm:inline-block px-2.5 py-0.5 bg-red-600/20 border border-red-600/50 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-full">
-              Administración
+            <div className="bg-zinc-950 px-2.5 py-1 rounded-xl shadow-xs flex items-center">
+              <img
+                src="/logo-motopartsec.png"
+                alt="Logo Motopartsec"
+                className="h-10 w-auto object-contain"
+              />
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200/80 text-red-600 text-[11px] font-bold uppercase tracking-wider rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+              Panel Admin
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline text-xs text-zinc-400">
-              Hola, <strong className="text-white">{usuario?.nombre}</strong>
+            <span className="hidden sm:inline text-xs text-slate-500">
+              Hola, <strong className="text-slate-900 font-semibold">{usuario?.nombre}</strong>
             </span>
             <button
               onClick={handleSalir}
-              className="flex items-center gap-1.5 text-xs font-bold text-zinc-300 hover:text-red-500 border border-zinc-800 hover:border-red-600 px-3 py-2 rounded-lg transition cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-red-600 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 px-3.5 py-2 rounded-xl transition cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               Salir
@@ -64,9 +67,9 @@ export default function LayoutAdmin({ children }) {
           </div>
         </div>
 
-        {/* Barra de Navegación Admin */}
-        <div className="bg-zinc-950/90 border-t border-zinc-900 overflow-x-auto">
-          <nav className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-2">
+        {/* Barra de Navegación Limpia */}
+        <div className="bg-white border-t border-slate-100 overflow-x-auto">
+          <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -81,7 +84,7 @@ export default function LayoutAdmin({ children }) {
       </header>
 
       {/* Contenido Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-7">
         {children}
       </main>
     </div>

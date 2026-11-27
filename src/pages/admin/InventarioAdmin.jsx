@@ -125,19 +125,27 @@ export default function InventarioAdmin() {
       'Precio Venta Publico ($)',
       'Total Costo Inventario ($)',
       'Total Venta Proyectada ($)',
+      'Utilidad Total Proyectada ($)',
       'Ganancia Unitaria ($)'
     ];
 
-    const filas = productos.map((p) => [
-      `"${p.detalle.replace(/"/g, '""')}"`,
-      p.cantidad,
-      p.stock_minimo,
-      Number(p.costo_proveedor).toFixed(2),
-      Number(p.precio_venta).toFixed(2),
-      Number(p.total_costo).toFixed(2),
-      Number(p.total_venta).toFixed(2),
-      Number(p.ganancia_unitaria).toFixed(2)
-    ]);
+    const filas = productos.map((p) => {
+      const totalCosto = Number(p.total_costo || 0);
+      const totalVenta = Number(p.total_venta || 0);
+      const utilidadFila = totalVenta - totalCosto;
+
+      return [
+        `"${p.detalle.replace(/"/g, '""')}"`,
+        p.cantidad,
+        p.stock_minimo,
+        Number(p.costo_proveedor).toFixed(2),
+        Number(p.precio_venta).toFixed(2),
+        totalCosto.toFixed(2),
+        totalVenta.toFixed(2),
+        utilidadFila.toFixed(2),
+        Number(p.ganancia_unitaria || 0).toFixed(2)
+      ];
+    });
 
     const contenidoCSV =
       'data:text/csv;charset=utf-8,\uFEFF' +
@@ -333,24 +341,28 @@ export default function InventarioAdmin() {
                 <th className="py-3 px-3">Detalle del Producto</th>
                 <th className="py-3 px-3">Costo Prov.</th>
                 <th className="py-3 px-3">PVP</th>
-                <th className="py-3 px-3">Total Costo</th>
+                <th className="py-3 px-3">Total Inversión</th>
                 <th className="py-3 px-3">Total PVP</th>
+                <th className="py-3 px-3">Utilidad</th>
                 <th className="py-3 px-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/70">
               {cargando ? (
                 <tr>
-                  <td colSpan="7" className="py-8 text-center text-zinc-400">Cargando inventario...</td>
+                  <td colSpan="8" className="py-8 text-center text-zinc-400">Cargando inventario...</td>
                 </tr>
               ) : productosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="py-8 text-center text-zinc-500">No hay productos registrados.</td>
+                  <td colSpan="8" className="py-8 text-center text-zinc-500">No hay productos registrados.</td>
                 </tr>
               ) : (
                 productosFiltrados.map((prod) => {
                   const esBajo = prod.cantidad <= prod.stock_minimo;
                   const enEdicion = editandoId === prod.id;
+                  const totalInversion = Number(prod.total_costo || 0);
+                  const totalPvp = Number(prod.total_venta || 0);
+                  const utilidad = totalPvp - totalInversion;
 
                   return (
                     <tr
@@ -393,7 +405,7 @@ export default function InventarioAdmin() {
                               className="w-20 bg-zinc-950 border border-red-600 rounded px-2 py-1 text-white"
                             />
                           </td>
-                          <td colSpan="2" className="py-2.5 px-2 text-xs text-zinc-400">
+                          <td colSpan="3" className="py-2.5 px-2 text-xs text-zinc-400">
                             Se recalculará al guardar
                           </td>
                           <td className="py-2.5 px-2 text-right space-x-1">
@@ -434,8 +446,11 @@ export default function InventarioAdmin() {
                           </td>
                           <td className="py-3 px-3 text-zinc-400">${Number(prod.costo_proveedor).toFixed(2)}</td>
                           <td className="py-3 px-3 font-bold text-white">${Number(prod.precio_venta).toFixed(2)}</td>
-                          <td className="py-3 px-3 text-zinc-400">${Number(prod.total_costo).toFixed(2)}</td>
-                          <td className="py-3 px-3 font-bold text-emerald-400">${Number(prod.total_venta).toFixed(2)}</td>
+                          <td className="py-3 px-3 text-zinc-400">${totalInversion.toFixed(2)}</td>
+                          <td className="py-3 px-3 font-bold text-white">${totalPvp.toFixed(2)}</td>
+                          <td className={`py-3 px-3 font-black ${utilidad >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {utilidad >= 0 ? `+$${utilidad.toFixed(2)}` : `-$${Math.abs(utilidad).toFixed(2)}`}
+                          </td>
                           <td className="py-3 px-3 text-right space-x-1.5 whitespace-nowrap">
                             <button
                               onClick={() => iniciarEdicion(prod)}

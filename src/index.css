@@ -2,125 +2,146 @@
 
 @layer base {
   body {
-    background-color: #f4f4f5; /* Fondo general gris muy claro / blanco suave */
-    color: #09090b;            /* Texto principal negro */
+    background-color: #09090b;
+    color: #ffffff;
     font-family: system-ui, -apple-system, sans-serif;
   }
 }
 
 /* =====================================================================
-   TEMA CLARO CORPORATIVO MOTOPARTSEC (FONDO BLANCO, ROJO Y NEGRO)
+   TEMA CLARO EJECUTIVO — PANEL ADMINISTRATIVO (.theme-admin-light)
+   Fondo Blanco Puro + Tarjetas Blancas con Elevación y Gris Perla Sutil
    ===================================================================== */
 
-/* 1. Fondos principales -> Blanco y Gris Claro */
-.bg-zinc-950,
-.bg-zinc-950\/90,
-.bg-zinc-950\/80,
-.bg-zinc-950\/60 {
+/* 1. Lienzo principal -> BLANCO PURO */
+.theme-admin-light,
+.theme-admin-light.bg-zinc-950 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* 2. Tarjetas principales -> BLANCO ELEVADO con sombra suave y borde fino */
+.theme-admin-light .bg-zinc-900,
+.theme-admin-light .bg-zinc-900\/70 {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 1px 3px 0 rgba(15, 23, 42, 0.03) !important;
+}
+
+/* 3. Cajas internas, paneles secundarios y tablas -> GRIS PERLA ULTRA SUTIL (#f8fafc) */
+.theme-admin-light .bg-zinc-900 .bg-zinc-950,
+.theme-admin-light .bg-zinc-900 .bg-zinc-950\/90,
+.theme-admin-light .bg-zinc-900 .bg-zinc-950\/80,
+.theme-admin-light .bg-zinc-900 .bg-zinc-950\/60 {
   background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: none !important;
 }
 
-.bg-zinc-900,
-.bg-zinc-900\/70 {
+/* Nivel 3 (tarjetas anidadas dentro de paneles gris perla) -> BLANCO PURO */
+.theme-admin-light .bg-zinc-900 .bg-zinc-950 .bg-zinc-900 {
   background-color: #ffffff !important;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
 }
 
-.bg-black,
-.bg-black\/90 {
-  background-color: #ffffff !important;
-}
-
-/* Mantener fondo negro únicamente en modales de foto ampliada */
-.fixed.inset-0.z-50.bg-black\/95 {
-  background-color: rgba(0, 0, 0, 0.92) !important;
-}
-
-.bg-zinc-800 {
+/* 4. Botones neutros, pills y badges -> Gris hielo limpio */
+.theme-admin-light .bg-zinc-800 {
   background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
-/* 2. Textos claros -> Negro y Gris Oscuro para máxima legibilidad */
-.text-white {
-  color: #09090b !important;
+.theme-admin-light .bg-zinc-800:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
 }
 
-/* Excepción: Mantener texto blanco dentro de botones e insignias rojas, verdes o negras */
-.bg-red-600.text-white,
-.bg-red-600 .text-white,
-.hover\:bg-red-600:hover.text-white,
-.hover\:bg-red-600:hover .text-white,
-.bg-emerald-600.text-white,
-.bg-emerald-500.text-white,
-.bg-gradient-to-tr.text-white,
-.file\:bg-red-600::file-selector-button {
+/* 5. Jerarquía tipográfica moderna */
+.theme-admin-light .text-white {
+  color: #0f172a !important;
+}
+
+/* Excepción: Mantener texto blanco en botones/insignias de color sólido */
+.theme-admin-light .bg-red-600,
+.theme-admin-light .bg-red-600 .text-white,
+.theme-admin-light .bg-red-600.text-white,
+.theme-admin-light .hover\:bg-red-600:hover,
+.theme-admin-light .hover\:bg-red-600:hover .text-white,
+.theme-admin-light .hover\:bg-red-700:hover,
+.theme-admin-light .bg-emerald-600,
+.theme-admin-light .bg-emerald-600 .text-white,
+.theme-admin-light .bg-black,
+.theme-admin-light .bg-black .text-white,
+.theme-admin-light .bg-zinc-950 .text-white,
+.theme-admin-light .file\:bg-red-600::file-selector-button {
   color: #ffffff !important;
 }
 
-.text-zinc-200,
-.text-zinc-300 {
-  color: #1e293b !important;
+.theme-admin-light .text-zinc-200,
+.theme-admin-light .text-zinc-300 {
+  color: #334155 !important;
 }
 
-.text-zinc-400 {
-  color: #475569 !important;
-}
-
-.text-zinc-500,
-.text-zinc-600 {
+.theme-admin-light .text-zinc-400 {
   color: #64748b !important;
 }
 
-/* 3. Bordes sutiles sobre fondo blanco */
-.border-zinc-800,
-.border-zinc-800\/80,
-.border-zinc-800\/70,
-.border-zinc-900,
-.border-zinc-700 {
+.theme-admin-light .text-zinc-500,
+.theme-admin-light .text-zinc-600 {
+  color: #94a3b8 !important;
+}
+
+/* Colores de estado vibrantes y legibles sobre claro */
+.theme-admin-light .text-emerald-400 {
+  color: #059669 !important;
+}
+
+.theme-admin-light .text-red-400 {
+  color: #dc2626 !important;
+}
+
+/* 6. Bordes sutiles y divisores limpios */
+.theme-admin-light .border-zinc-800,
+.theme-admin-light .border-zinc-800\/80,
+.theme-admin-light .border-zinc-800\/70,
+.theme-admin-light .border-zinc-700,
+.theme-admin-light .border-zinc-900 {
   border-color: #e2e8f0 !important;
 }
 
-.divide-zinc-800\/70 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #e2e8f0 !important;
+.theme-admin-light .divide-zinc-800\/70 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #f1f5f9 !important;
 }
 
-/* 4. Ajustes de tarjetas destacadas (Fidelización y Alertas) */
-.from-zinc-900.via-zinc-900 {
-  background-image: linear-gradient(to bottom right, #ffffff, #fff1f2) !important;
-}
-
-.bg-red-950\/30,
-.bg-red-950\/20 {
+/* 7. Alertas y tarjetas destacadas (tono pastel suave con acento rojo) */
+.theme-admin-light .bg-red-950\/30,
+.theme-admin-light .bg-red-950\/20,
+.theme-admin-light .bg-red-950\/60 {
   background-color: #fef2f2 !important;
+  border-color: #fecaca !important;
 }
 
-.bg-red-950\/80,
-.bg-red-950\/90,
-.bg-red-950 {
-  background-color: #fee2e2 !important;
-}
-
-.text-red-200 {
-  color: #991b1b !important;
-}
-
-.bg-emerald-950\/80 {
-  background-color: #ecfdf5 !important;
-}
-
-.text-emerald-200 {
-  color: #065f46 !important;
-}
-
-/* 5. Inputs y Selects en modo claro */
-input,
-select,
-textarea {
+/* 8. Inputs, Selects y Textareas estilizados */
+.theme-admin-light input,
+.theme-admin-light select,
+.theme-admin-light textarea {
   background-color: #ffffff !important;
-  color: #09090b !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-input::placeholder,
-textarea::placeholder {
+.theme-admin-light input:focus,
+.theme-admin-light select:focus,
+.theme-admin-light textarea:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+  outline: none !important;
+}
+
+.theme-admin-light input::placeholder,
+.theme-admin-light textarea::placeholder {
   color: #94a3b8 !important;
 }
