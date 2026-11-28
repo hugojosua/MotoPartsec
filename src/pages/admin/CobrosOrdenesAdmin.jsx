@@ -390,7 +390,6 @@ export default function CobrosOrdenesAdmin() {
     try {
       let urlFotoNueva = null;
 
-      // Si el mecánico subió una foto del avance, guardarla en Storage y sumarla a la orden
       if (fotoAvance) {
         const ext = fotoAvance.name.split('.').pop();
         const nombreArchivo = `avance_${orden.numero_orden}_${Date.now()}.${ext}`;
@@ -408,7 +407,6 @@ export default function CobrosOrdenesAdmin() {
         urlFotoNueva = urlData.publicUrl;
       }
 
-      // Actualizar estado y galería de la orden si hubo cambios
       const camposOrden = { estado: estadoFinal };
       if (estadoFinal === 'Entregada' && !orden.fecha_real_entrega) {
         camposOrden.fecha_real_entrega = new Date().toISOString();
@@ -424,7 +422,6 @@ export default function CobrosOrdenesAdmin() {
 
       if (ordUpdErr) throw ordUpdErr;
 
-      // Registrar en la bitácora de avances para notificar al cliente
       const { error: avErr } = await supabase.from('orden_avances').insert([
         {
           orden_id: orden.numero_orden,
@@ -464,7 +461,6 @@ export default function CobrosOrdenesAdmin() {
       setMensajeActualizacion('');
       setFotoAvance(null);
 
-      // Marcar notificaciones del cliente en esta orden como leídas
       const noLeidosCliente = (avancesPorOrden[orden.numero_orden] || []).filter(
         (a) => a.emisor_rol === 'cliente' && !a.leido
       );
